@@ -20,12 +20,18 @@
     </div>
   </header>
 
+  <!-- Barra de grupos -->
+  <div id="groupsBar" class="groups-bar" aria-label="Grupos de atalhos">
+    <!-- grupos serão renderizados aqui -->
+    <button id="addGroupBtn" class="group-add">+ Grupo</button>
+  </div>
+
   <main>
     <section id="grid" class="grid" aria-label="Lista de atalhos"></section>
     <p id="emptyHint" class="hint">Nenhum atalho. Clique em "Adicionar atalho" para começar.</p>
   </main>
 
-  <!-- Modal de edição -->
+  <!-- Modal de edição (atalho) -->
   <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="modal-content">
       <h2 id="modalTitle">Editar atalho</h2>
@@ -37,6 +43,10 @@
         <label>
           URL
           <input type="url" id="inputUrl" placeholder="https://exemplo.com" required />
+        </label>
+        <label>
+          Grupo
+          <select id="selectGroup"></select>
         </label>
         <div class="modal-actions">
           <button type="submit" id="saveBtn">Salvar</button>

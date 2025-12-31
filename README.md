@@ -1,18 +1,29 @@
 ```markdown
-# Painel de Atalhos
+# Painel de Atalhos (com Grupos)
 
-Site simples que mostra muitos botões de atalho. Recursos:
+Site simples que mostra muitos botões de atalho, agora com suporte a grupos.
+
+Recursos:
+- Criar/renomear/excluir grupos
+- Reordenar grupos (arrastar os chips)
 - Adicionar, editar e excluir atalhos (nome + URL)
+- Mover atalhos entre grupos ao editar/criar
 - Salva no Local Storage do navegador
-- Reordenar por drag & drop
-- Exportar/Importar JSON para backup ou mover entre máquinas
+- Reordenar atalhos dentro do grupo por drag & drop
+- Exportar/Importar JSON (novo formato salva {groups, activeGroupId})
+- Reset para exemplos
+
+Migração:
+- Se você já tinha a versão anterior (um array simples no localStorage), o app detecta e converte para um único grupo "Geral" automaticamente.
 
 Como usar:
-1. Coloque os arquivos (index.html, styles.css, app.js) em uma pasta (por exemplo `site/`).
-2. Abra `index.html` no navegador.
-3. Clique em "Adicionar atalho" para criar, clique no card para abrir, clique em ✏️ para editar.
-4. Use Exportar JSON para salvar um backup, ou Importar JSON para carregar um arquivo exportado.
+1. Substitua os arquivos no repositório pela versão atualizada (index.html, styles.css, app.js, README.md).
+2. Abra `index.html` no navegador ou atualize sua GitHub Pages.
+3. Use a barra de grupos para criar/selecionar/renomear/excluir grupos.
+4. Clique em "Adicionar atalho" para criar um atalho; escolha o grupo no modal.
+5. Edite um atalho para movê-lo entre grupos (campo "Grupo" no modal).
 
-Observações:
-- As alterações são salvas automaticamente no browser (localStorage). Se quiser persistência centralizada (por exemplo salvar no GitHub ou servidor), me diga e eu eu forneço uma versão com backend (Node/Express) ou integração com Google Sheets/Gist.
-```
+Se quiser, eu posso:
+- Gerar um commit/PR com essas alterações (se você me autorizar novamente e o repo já tiver um commit inicial).
+- Adicionar funcionalidade para mover atalhos entre grupos via drag-and-drop direto entre listas (interface com múltiplas colunas).
+- Implementar persistência no servidor ou usar Gist/GitHub para armazenar centralmente.
