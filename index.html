@@ -3,110 +3,32 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Atalhos - Painel</title>
+  <title>Atalhos - Público</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header>
+  <header class="public-header">
     <h1>Painel de Atalhos</h1>
 
-    <!-- Controles da view administrativa (aparecem só quando autenticado) -->
-    <div id="adminControls" class="header-controls hidden">
-      <button id="addBtn">Adicionar atalho</button>
-      <button id="usersBtn">Usuários</button>
-      <button id="exportBtn">Exportar JSON</button>
-      <label class="import-label">
-        Importar JSON
-        <input type="file" id="importFile" accept=".json" />
-      </label>
-      <button id="resetBtn" title="Reiniciar para exemplos">Reset</button>
-    </div>
-
-    <!-- Área de autenticação / sessão (sempre visível; JS controla o que mostrar) -->
-    <div id="authArea" class="auth-area">
-      <!-- Login (public view) -->
+    <div class="auth-area">
       <form id="loginForm" class="login-form" autocomplete="off">
         <input id="loginUser" name="user" placeholder="Usuário" />
         <input id="loginPass" name="pass" type="password" placeholder="Senha" />
         <button type="submit">Entrar</button>
       </form>
-
-      <!-- Sessão (aparece quando autenticado) -->
-      <div id="sessionPanel" class="session-panel hidden">
-        <span id="sessionUser" class="session-user"></span>
-        <button id="logoutBtn" class="logout-btn">Logoff</button>
-      </div>
     </div>
   </header>
 
-  <!-- Barra de grupos -->
   <div id="groupsBar" class="groups-bar" aria-label="Grupos de atalhos">
-    <!-- grupos serão renderizados aqui -->
-    <button id="addGroupBtn" class="group-add">+ Grupo</button>
+    <button class="group-chip active" aria-current="true">Geral</button>
   </div>
 
   <main>
     <section id="grid" class="grid" aria-label="Lista de atalhos"></section>
-    <p id="emptyHint" class="hint">Nenhum atalho. Clique em "Adicionar atalho" para começar.</p>
+    <p id="emptyHint" class="hint">Nenhum atalho.</p>
   </main>
 
-  <!-- Modal de edição (atalho) -->
-  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true">
-    <div class="modal-content">
-      <h2 id="modalTitle">Editar atalho</h2>
-      <form id="form">
-        <label>
-          Nome
-          <input type="text" id="inputName" placeholder="Ex: Google" required />
-        </label>
-        <label>
-          URL
-          <input type="url" id="inputUrl" placeholder="https://exemplo.com" required />
-        </label>
-        <label>
-          Grupo
-          <select id="selectGroup"></select>
-        </label>
-        <div class="modal-actions">
-          <button type="submit" id="saveBtn">Salvar</button>
-          <button type="button" id="cancelBtn">Cancelar</button>
-          <button type="button" id="deleteBtn" class="danger">Excluir</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal de gerenciamento de usuários (admin) -->
-  <div id="usersModal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true">
-    <div class="modal-content">
-      <h2>Gerenciar Usuários</h2>
-
-      <div id="usersList" class="users-list"></div>
-
-      <hr />
-
-      <form id="createUserForm">
-        <label>
-          Novo usuário
-          <input id="newUser" placeholder="usuário" required />
-        </label>
-        <label>
-          Senha
-          <input id="newPass" type="password" placeholder="senha" required />
-        </label>
-        <label style="display:flex;align-items:center;gap:8px">
-          <input type="checkbox" id="newIsAdmin" />
-          <span>Administrador</span>
-        </label>
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
-          <button type="submit">Criar</button>
-          <button type="button" id="closeUsersModal">Fechar</button>
-        </div>
-      </form>
-
-    </div>
-  </div>
-
-  <script src="app.js"></script>
+  <script src="storage.js" defer></script>
+  <script src="public.js" defer></script>
 </body>
 </html>

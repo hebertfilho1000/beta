@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Atalhos - Admin</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Painel de Atalhos — Administração</h1>
+
+    <div class="header-controls">
+      <button id="tabShortcuts" class="tab active">Atalhos</button>
+      <button id="tabUsers" class="tab">Usuários</button>
+      <button id="logoutBtn" class="logout-btn">Logoff</button>
+    </div>
+  </header>
+
+  <!-- groups bar (admin can create) -->
+  <div id="groupsBar" class="groups-bar" aria-label="Grupos de atalhos admin">
+    <button id="addGroupBtn" class="group-add">+ Grupo</button>
+  </div>
+
+  <main>
+    <!-- Shortcuts editor section -->
+    <section id="sectionShortcuts">
+      <div class="admin-controls">
+        <button id="addBtn">Adicionar atalho</button>
+        <button id="exportBtn">Exportar JSON</button>
+        <label class="import-label">
+          Importar JSON
+          <input type="file" id="importFile" accept=".json" />
+        </label>
+        <button id="resetBtn">Reset</button>
+      </div>
+
+      <section id="grid" class="grid" aria-label="Lista de atalhos editavel"></section>
+      <p id="emptyHint" class="hint">Nenhum atalho.</p>
+    </section>
+
+    <!-- Users management section (separate page/section) -->
+    <section id="sectionUsers" class="hidden">
+      <h2>Gerenciar Usuários</h2>
+      <div id="usersList" class="users-list"></div>
+
+      <hr />
+
+      <form id="createUserForm" class="create-user-form">
+        <label>
+          Novo usuário
+          <input id="newUser" placeholder="usuário" required />
+        </label>
+        <label>
+          Senha
+          <input id="newPass" type="password" placeholder="senha" required />
+        </label>
+        <label style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="newIsAdmin" />
+          <span>Administrador</span>
+        </label>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+          <button type="submit">Criar</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <!-- Modal de edição de atalho -->
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-content">
+      <h2 id="modalTitle">Editar atalho</h2>
+      <form id="form">
+        <label>
+          Nome
+          <input type="text" id="inputName" placeholder="Ex: Google" required />
+        </label>
+        <label>
+          URL
+          <input type="url" id="inputUrl" placeholder="https://exemplo.com" required />
+        </label>
+        <label>
+          Grupo
+          <select id="selectGroup"></select>
+        </label>
+        <div class="modal-actions">
+          <button type="submit" id="saveBtn">Salvar</button>
+          <button type="button" id="cancelBtn">Cancelar</button>
+          <button type="button" id="deleteBtn" class="danger">Excluir</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="storage.js" defer></script>
+  <script src="admin.js" defer></script>
+</body>
+</html>

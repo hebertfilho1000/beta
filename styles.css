@@ -27,11 +27,11 @@ header{
   justify-content:space-between;
   align-items:center;
   gap:12px;
-  position:relative;
 }
+.public-header{display:flex;align-items:center;gap:12px}
 h1{margin:0;font-size:1.2rem}
 .header-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.hidden{display:none}
+.auth-area{margin-left:auto}
 button{
   background:var(--glass);
   border:1px solid rgba(255,255,255,0.04);
@@ -43,24 +43,18 @@ button{
 button:hover{filter:brightness(1.05)}
 .import-label{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
 .import-label input{display:none}
-#resetBtn{background:transparent;border:1px dashed rgba(255,255,255,0.04)}
+.logout-btn{background:transparent;border:1px solid rgba(255,255,255,0.04)}
 
-/* Auth area on top-right */
-.auth-area{
-  margin-left:auto;
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
+/* Tabs */
+.tab{border-radius:8px}
+.tab.active{background:linear-gradient(90deg, rgba(6,182,212,0.12), rgba(6,182,212,0.06));color:var(--accent)}
+
+/* Auth / login form */
 .login-form{display:flex;gap:6px;align-items:center}
 .login-form input{
   background:transparent;border:1px solid rgba(255,255,255,0.04);padding:6px;border-radius:8px;color:inherit;
   width:100px;
 }
-.login-form button{padding:6px 10px}
-.session-panel{display:flex;align-items:center;gap:8px}
-.session-user{font-weight:600;color:var(--muted)}
-.logout-btn{background:transparent;border:1px solid rgba(255,255,255,0.04)}
 
 /* Groups bar */
 .groups-bar{
@@ -88,8 +82,6 @@ button:hover{filter:brightness(1.05)}
   border-color:rgba(6,182,212,0.18);
   font-weight:600;
 }
-.group-chip .actions{display:inline-flex;gap:6px;margin-left:6px}
-.group-chip .icon{font-size:0.9rem;color:var(--muted)}
 .group-add{margin-left:auto;background:var(--glass);border-radius:999px}
 
 /* Grid of cards */
@@ -125,6 +117,7 @@ main{flex:1; display:flex; flex-direction:column; gap:12px}
 
 /* Modal */
 .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);z-index:30}
+.hidden{display:none}
 .modal-content{
   background:linear-gradient(180deg,#071226 0%, #091827 100%);
   border-radius:12px;padding:18px;width:360px;border:1px solid rgba(255,255,255,0.04)
@@ -137,12 +130,14 @@ input[type="text"], input[type="url"], input[type="password"], select{
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
 .danger{background:linear-gradient(90deg,var(--danger),#d43b3b);border:0;color:white}
 
-/* Users list inside users modal */
-.users-list{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto;margin-bottom:8px}
+/* Users list */
+.users-list{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow:auto;margin-bottom:8px}
 .user-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.02)}
 .user-row .meta{display:flex;gap:12px;align-items:center}
 .user-row .meta .uname{font-weight:600}
 .user-row .meta .urole{font-size:0.85rem;color:var(--muted)}
+
+.admin-controls{display:flex;gap:8px;align-items:center;margin-bottom:8px}
 
 @media (max-width:720px){
   .login-form input{width:70px}
