@@ -42,7 +42,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       chip.textContent = g.name;
       chip.addEventListener('click', () => {
         renderGroupItems(g);
-        // mark active
         Array.from(groupsBar.querySelectorAll('.group-chip')).forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
       });

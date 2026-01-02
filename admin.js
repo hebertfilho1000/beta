@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // protect admin page
   if(!AppStore.isAuthenticated()){
     // not authenticated: redirect to public page
-    window.location.href = 'index.html';
+    window.location.replace('index.html');
     return;
   }
 
@@ -44,6 +44,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const newUserInput = document.getElementById('newUser');
   const newPassInput = document.getElementById('newPass');
   const newIsAdmin = document.getElementById('newIsAdmin');
+
+  // user import/export controls
+  const exportUsersBtn = document.getElementById('exportUsersBtn');
+  const importUsersFile = document.getElementById('importUsersFile');
 
   let groups = AppStore.getGroups();
   let activeGroupId = AppStore.getActiveGroupId() || (groups[0] && groups[0].id);
@@ -90,7 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       groupsBar.appendChild(chip);
     });
-    // add group button at end
+    // show +Grupo only to admins
     addGroupBtn.style.display = AppStore.isCurrentAdmin() ? 'inline-flex' : 'none';
   }
 
@@ -174,16 +178,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  function renderSelectGroup(){
-    selectGroup.innerHTML = '';
-    groups.forEach(g => {
-      const opt = document.createElement('option');
-      opt.value = g.id;
-      opt.textContent = g.name;
-      selectGroup.appendChild(opt);
-    });
-  }
-
   // modal
   function openEditModal(index = null, groupId = null){
     editingIndex = index;
@@ -253,6 +247,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // buttons: add shortcut
+  addBtn.addEventListener('click', () => {
+    if(!AppStore.isCurrentAdmin()){
+      return alert('Acesso negado: apenas administradores podem adicionar atalhos');
+    }
+    openEditModal(null, activeGroupId);
+  });
+
   // groups
   addGroupBtn.addEventListener('click', () => {
     if(!AppStore.isCurrentAdmin()){
@@ -265,7 +267,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // admin functions: export/import/reset
+  // admin functions: export/import/reset for groups
   exportBtn.addEventListener('click', () => {
     const blob = new Blob([JSON.stringify({groups, activeGroupId}, null, 2)], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
@@ -311,7 +313,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // users management
+  // users management: render and controls
   function renderUsersList(){
     usersList.innerHTML = '';
     const list = AppStore.getUsers();
@@ -365,7 +367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if(ok){
             if(u.username === AppStore.currentSession()?.username){
               AppStore.logout();
-              window.location.href = 'index.html';
+              window.location.replace('index.html');
             } else {
               renderUsersList();
             }
@@ -400,6 +402,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // export/import users handlers
+  if(exportUsersBtn){
+    exportUsersBtn.addEventListener('click', () => {
+      try{
+        const data = AppStore.exportUsers();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'users.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }catch(err){
+        alert('Erro ao exportar usuários: ' + (err.message || err));
+      }
+    });
+  }
+  if(importUsersFile){
+    importUsersFile.addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try{
+          const data = JSON.parse(reader.result);
+          const replace = confirm('Deseja substituir todos os usuários existentes pelo arquivo importado? (OK = substituir, Cancel = mesclar sem duplicar)');
+          AppStore.importUsers(data, replace);
+          alert('Usuários importados com sucesso.');
+          renderUsersList();
+        }catch(err){
+          alert('Arquivo inválido: ' + (err.message || err));
+        }
+      };
+      reader.readAsText(f);
+      e.target.value = '';
+    });
+  }
+
   // tabs
   tabShortcuts.addEventListener('click', () => {
     tabShortcuts.classList.add('active');
@@ -416,9 +458,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderUsersList();
   });
 
+  // logout: use replace to remove admin from history (prevents back returning to admin)
   logoutBtn.addEventListener('click', () => {
     AppStore.logout();
-    window.location.href = 'index.html';
+    window.location.replace('index.html');
+  });
+
+  // protect against pageshow/bfcache: revalidate session when page is shown
+  window.addEventListener('pageshow', async (event) => {
+    // re-init (safe) and redirect if not authenticated
+    if (typeof AppStore !== 'undefined' && AppStore.init) {
+      try { await AppStore.init(); } catch(e){}
+      if(!AppStore.isAuthenticated()){
+        window.location.replace('index.html');
+      }
+    }
   });
 
   // initial render helpers

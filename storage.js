@@ -182,6 +182,26 @@
       return true;
     },
 
+    // export/import users (useful to move users between browsers)
+    exportUsers(){
+      // returns an array of user objects (with passwordHash and salt)
+      return users.map(u => ({ username: u.username, passwordHash: u.passwordHash, salt: u.salt, isAdmin: !!u.isAdmin }));
+    },
+    importUsers(usersArray, replace = false){
+      if(!Array.isArray(usersArray)) throw new Error('Formato inválido');
+      if(replace){
+        users = usersArray.map(u => ({ username: u.username, passwordHash: u.passwordHash, salt: u.salt, isAdmin: !!u.isAdmin }));
+      } else {
+        usersArray.forEach(u => {
+          if(!users.find(x => x.username === u.username)){
+            users.push({ username: u.username, passwordHash: u.passwordHash, salt: u.salt, isAdmin: !!u.isAdmin });
+          }
+        });
+      }
+      saveUsers();
+      return true;
+    },
+
     async login(username, password){
       const u = users.find(x => x.username === username);
       if(!u) throw new Error('Usuário/Senha inválidos');

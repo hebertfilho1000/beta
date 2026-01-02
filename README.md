@@ -1,34 +1,41 @@
 ```markdown
-# Painel de Atalhos — Página Pública + Admin Separado (com ícones e cores por atalho)
+# Painel de Atalhos — Página Pública + Admin Separado (aprofundado)
 
-Arquivos
-- index.html — página pública (somente leitura). Formulário de login no canto superior direito; ao logar, redireciona para admin.html.
-- admin.html — área administrativa (edição de atalhos e grupos) e seção separada para gerenciamento de usuários (sem modal).
-- storage.js — funções compartilhadas (grupos, usuários, sessão, hash).
-- public.js — lógica da página pública (render leitura + login).
-- admin.js — lógica da página admin (edição, usuários, logoff). Suporta ícone e cor por atalho.
-- styles.css — estilos compartilhados.
-- README.md — este arquivo.
+Resumo das mudanças
+- Separação em duas páginas: index.html (público) e admin.html (admin).
+- Cada atalho pode ter `icon` (emoji / URL / classe FA) e `color`.
+- Adição de Exportar/Importar Usuários (para copiar contas entre navegadores).
+- Logout usa `location.replace('index.html')` para evitar que o botão Voltar do navegador retorne ao admin.
+- `pageshow` no admin revalida sessão ao restaurar página da bfcache e redireciona se necessário.
+- Botões "Adicionar atalho" e "+ Grupo" corrigidos e visíveis para administradores.
 
-Novidades / instruções rápidas
-- Cada atalho agora pode ter:
-  - icon: texto (emoji), URL de imagem (https://...), ou classe de ícone (ex.: `fa-brands fa-github`).
-  - color: cor de fundo para a "favicon box" (input type="color" no modal).
-- No admin: abra a aba "Atalhos", clique em "Adicionar atalho" ou ✏️ em um card para editar. Defina Ícone e Cor no formulário.
-- Na pública: o card exibirá o ícone (imagem / FontAwesome / emoji) e aplicará a cor de fundo definida.
+Como mover usuários entre PCs
+- No PC A (origem): Admin → Usuários → Exportar Usuários → baixe users.json
+- No PC B (destino): faça login como admin (ou outro admin local), vá em Usuários → Importar Usuários → escolha users.json e selecione substituir ou mesclar.
+- Atenção: o arquivo exportado contém hashes e salts das senhas (não senhas em texto). Proteja esse arquivo.
 
-Usuários & autenticação
-- Usuários são gerenciados no admin (aba "Usuários"): criar, alterar senha, alternar admin, excluir (com proteção para o último admin).
-- Login: admin/admin criado no primeiro uso — altere a senha inicialmente.
-- Sessão salva em sessionStorage (encerra ao fechar a aba).
+Segurança
+- Implementação totalmente client-side (localStorage/sessionStorage).
+- Para produção: usar backend/serviço (Firebase/Auth + Firestore ou Node/Express + DB) para autenticação e sincronização segura.
 
-Observações de segurança
-- Implementação inteiramente client-side (localStorage/sessionStorage). Mesmo com hashing SHA‑256+salt, NÃO é adequada para produção.
-- Para uso público com restrição real, implemente autenticação e armazenamento no servidor (HTTPS + bcrypt/Argon2).
+Testes recomendados
+1. index.html:
+   - Ver atalhos públicos.
+   - Fazer login com admin/admin (se for primeira execução).
+2. admin.html:
+   - Adicionar grupo (+ Grupo) — visível para admins.
+   - Adicionar atalho (Adicionar atalho) — preencher nome, url, ícone e cor.
+   - Editar atalho (✏️) e mover entre grupos no select.
+   - Reordenar atalhos por drag dentro do grupo.
+   - Exportar/Importar grupos (JSON).
+   - Usuários: criar usuário, exportar/importar usuários, alterar senha, alternar admin, excluir (cuidado com último admin).
+3. Logout:
+   - Clique em Logoff — você deve ir para index.html.
+   - Tentar clicar Back no navegador não deve voltar ao admin.html (deverá permanecer no public).
 
 Próximos passos (opcionais)
-- Sincronização remota (Gist/Firebase/Backend).
-- Favicon automático ao inserir URL (utilizando https://www.google.com/s2/favicons?domain=...).
-- Drag-and-drop entre colunas para mover atalhos entre grupos.
+- Sincronização remota (Firebase), para que usuários e atalhos sejam os mesmos em todos os dispositivos sem export/import.
+- Automatizar captura de favicon a partir da URL (ex.: https://www.google.com/s2/favicons?domain=...).
+- Melhorar UX: confirmação ao criar usuário, mensagens inline, paginação para many users, etc.
 
 ```
