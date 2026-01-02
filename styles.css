@@ -104,8 +104,16 @@ main{flex:1; display:flex; flex-direction:column; gap:12px}
 }
 .card:active{cursor:grabbing}
 .card:hover{transform:translateY(-4px)}
-.card .favicon{
-  width:40px;height:40px;border-radius:8px;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-weight:700}
+/* Favicon box that supports emoji/text, font icons and images */
+.favicon{
+  width:40px;height:40px;border-radius:8px;
+  background:rgba(255,255,255,0.03);
+  display:flex;align-items:center;justify-content:center;font-weight:700;
+  color:inherit;overflow:hidden;font-size:18px;
+}
+.favicon img{width:100%;height:100%;object-fit:cover;border-radius:6px}
+.favicon i, .favicon .fa{font-size:18px}
+
 .card .meta{flex:1;min-width:0}
 .card .meta .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card .meta .url{font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -124,7 +132,7 @@ main{flex:1; display:flex; flex-direction:column; gap:12px}
 }
 .modal-content h2{margin:0 0 12px 0}
 form label{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;font-size:.95rem}
-input[type="text"], input[type="url"], input[type="password"], select{
+input[type="text"], input[type="url"], input[type="password"], select, input[type="color"]{
   padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;
 }
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}

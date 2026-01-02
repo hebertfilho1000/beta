@@ -35,6 +35,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const cancelBtn = document.getElementById('cancelBtn');
   const deleteBtn = document.getElementById('deleteBtn');
 
+  // icon/color inputs
+  const inputIcon = document.getElementById('inputIcon');
+  const inputColor = document.getElementById('inputColor');
+
   const usersList = document.getElementById('usersList');
   const createUserForm = document.getElementById('createUserForm');
   const newUserInput = document.getElementById('newUser');
@@ -52,6 +56,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     groups = AppStore.getGroups();
     activeGroupId = AppStore.getActiveGroupId();
     renderAll();
+  }
+
+  function createFaviconElement(s){
+    const favicon = document.createElement('div');
+    favicon.className = 'favicon';
+    if(s.color) favicon.style.backgroundColor = s.color;
+    if(s.icon && (s.icon.startsWith('http') || s.icon.startsWith('data:'))){
+      const img = document.createElement('img');
+      img.src = s.icon;
+      img.alt = s.name || '';
+      favicon.appendChild(img);
+    } else if(s.icon && s.icon.match(/(^|\s)fa[-\w ]+|(^|\s)mdi[-\w ]+/)){
+      const i = document.createElement('i');
+      i.className = s.icon;
+      favicon.appendChild(i);
+    } else {
+      favicon.textContent = s.icon || (s.name ? s.name.slice(0,2).toUpperCase() : '??');
+    }
+    return favicon;
   }
 
   function renderGroupsBar(){
@@ -85,9 +108,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       card.className = 'card';
       card.setAttribute('draggable','true');
       card.dataset.index = i;
-      const favicon = document.createElement('div');
-      favicon.className = 'favicon';
-      favicon.textContent = s.name ? s.name.slice(0,2).toUpperCase() : '??';
+
+      const favicon = createFaviconElement(s);
+
       const meta = document.createElement('div');
       meta.className = 'meta';
       const nameEl = document.createElement('div');
@@ -98,6 +121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       urlEl.textContent = s.url;
       meta.appendChild(nameEl);
       meta.appendChild(urlEl);
+
       const actions = document.createElement('div');
       actions.className = 'actions';
       const openBtn = document.createElement('button');
@@ -168,6 +192,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       modalTitle.textContent = 'Adicionar atalho';
       inputName.value = '';
       inputUrl.value = '';
+      inputIcon.value = '';
+      inputColor.value = '#0b1220';
       deleteBtn.style.display = 'none';
       selectGroup.value = editingGroupId;
     } else {
@@ -176,6 +202,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const s = g && g.items && g.items[index];
       inputName.value = s ? s.name : '';
       inputUrl.value = s ? s.url : '';
+      inputIcon.value = s ? (s.icon || '') : '';
+      inputColor.value = s ? (s.color || '#0b1220') : '#0b1220';
       deleteBtn.style.display = 'inline-block';
       selectGroup.value = editingGroupId;
     }
@@ -199,7 +227,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const targetGroupId = selectGroup.value;
     const targetGroup = groups.find(g => g.id === targetGroupId);
     if(!targetGroup) return alert('Grupo inválido');
-    const record = {name, url};
+    const record = { name, url, icon: inputIcon.value.trim() || '', color: inputColor.value || '' };
     if(editingIndex === null){
       targetGroup.items.push(record);
     } else {
@@ -227,6 +255,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // groups
   addGroupBtn.addEventListener('click', () => {
+    if(!AppStore.isCurrentAdmin()){
+      return alert('Acesso negado: apenas administradores podem criar grupos');
+    }
     const name = prompt('Nome do novo grupo:', 'Novo Grupo');
     if(name && name.trim()){
       groups.push({id: id(), name: name.trim(), items: []});
@@ -255,12 +286,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const data = JSON.parse(reader.result);
         if(Array.isArray(data)){
           if(confirm('Arquivo JSON é um array antigo. Substituir atalhos atuais por este array (será colocado em um único grupo "Geral")?')) {
-            groups = [{id: id(), name:'Geral', items: data.map(it => ({name:it.name||'', url:it.url||''}))}];
+            groups = [{id: id(), name:'Geral', items: data.map(it => ({name:it.name||'', url:it.url||'', icon: it.icon || '', color: it.color || ''}))}];
             saveAndReload(groups, groups[0].id);
           }
         } else if(data && Array.isArray(data.groups)){
           if(confirm('Substituir dados atuais pelos grupos do arquivo importado?')) {
-            groups = data.groups.map(g => ({id: g.id || id(), name: g.name || 'Grupo', items: Array.isArray(g.items) ? g.items.map(it => ({name: it.name||'', url: it.url||''})) : []}));
+            groups = data.groups.map(g => ({id: g.id || id(), name: g.name || 'Grupo', items: Array.isArray(g.items) ? g.items.map(it => ({name: it.name||'', url: it.url||'', icon: it.icon||'', color: it.color||''})) : []}));
             saveAndReload(groups, data.activeGroupId || (groups[0] && groups[0].id));
           }
         } else {
@@ -283,8 +314,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // users management
   function renderUsersList(){
     usersList.innerHTML = '';
-    const users = AppStore.getUsers();
-    users.forEach(u => {
+    const list = AppStore.getUsers();
+    list.forEach(u => {
       const row = document.createElement('div');
       row.className = 'user-row';
       const meta = document.createElement('div');

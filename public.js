@@ -11,6 +11,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loginUser = document.getElementById('loginUser');
   const loginPass = document.getElementById('loginPass');
 
+  function createFaviconElement(s){
+    const favicon = document.createElement('div');
+    favicon.className = 'favicon';
+    // color applied if provided
+    if(s.color) favicon.style.backgroundColor = s.color;
+    // decide content
+    if(s.icon && (s.icon.startsWith('http') || s.icon.startsWith('data:'))){
+      const img = document.createElement('img');
+      img.src = s.icon;
+      img.alt = s.name || '';
+      favicon.appendChild(img);
+    } else if(s.icon && s.icon.match(/(^|\s)fa[-\w ]+|(^|\s)mdi[-\w ]+/)){
+      const i = document.createElement('i');
+      i.className = s.icon;
+      favicon.appendChild(i);
+    } else {
+      favicon.textContent = s.icon || (s.name ? s.name.slice(0,2).toUpperCase() : '??');
+    }
+    return favicon;
+  }
+
   function renderGroups(){
     groupsBar.innerHTML = '';
     const groups = AppStore.getGroups();
@@ -21,6 +42,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       chip.textContent = g.name;
       chip.addEventListener('click', () => {
         renderGroupItems(g);
+        // mark active
+        Array.from(groupsBar.querySelectorAll('.group-chip')).forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
       });
       groupsBar.appendChild(chip);
     });
@@ -37,9 +61,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     g.items.forEach(s => {
       const card = document.createElement('div');
       card.className = 'card';
-      const favicon = document.createElement('div');
-      favicon.className = 'favicon';
-      favicon.textContent = s.name ? s.name.slice(0,2).toUpperCase() : '??';
+
+      const favicon = createFaviconElement(s);
+
       const meta = document.createElement('div');
       meta.className = 'meta';
       const nameEl = document.createElement('div');
@@ -50,6 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       urlEl.textContent = s.url;
       meta.appendChild(nameEl);
       meta.appendChild(urlEl);
+
       const actions = document.createElement('div');
       actions.className = 'actions';
       const openBtn = document.createElement('button');
@@ -61,12 +86,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.open(s.url.startsWith('http') ? s.url : 'https://' + s.url, '_blank');
       });
       actions.appendChild(openBtn);
+
       card.appendChild(favicon);
       card.appendChild(meta);
       card.appendChild(actions);
+
       card.addEventListener('click', () => {
         window.open(s.url.startsWith('http') ? s.url : 'https://' + s.url, '_blank');
       });
+
       grid.appendChild(card);
     });
   }

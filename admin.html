@@ -4,6 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Atalhos - Admin</title>
+
+  <!-- Font Awesome opcional (para usar classes FA no campo Ícone) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pbvw2YQqM5p7kK6N1bVj8Z2k9o2xY7xUNbGv3wR+O3bQhKYm6S6s7xPZcQy7x1aQ5Gm1K7m7A8g4xq4Y4D5Q==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -19,6 +23,7 @@
 
   <!-- groups bar (admin can create) -->
   <div id="groupsBar" class="groups-bar" aria-label="Grupos de atalhos admin">
+    <!-- chips renderizados via admin.js -->
     <button id="addGroupBtn" class="group-add">+ Grupo</button>
   </div>
 
@@ -83,6 +88,14 @@
         <label>
           Grupo
           <select id="selectGroup"></select>
+        </label>
+        <label>
+          Ícone (emoji, URL da imagem ou classe FontAwesome)
+          <input type="text" id="inputIcon" placeholder="Ex: 🔎 ou https://.../icon.png ou fa-brands fa-github" />
+        </label>
+        <label>
+          Cor (opcional)
+          <input type="color" id="inputColor" value="#0b1220" />
         </label>
         <div class="modal-actions">
           <button type="submit" id="saveBtn">Salvar</button>
