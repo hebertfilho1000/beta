@@ -163,6 +163,10 @@ function load(){
   }
   loadUsersFromStorage();
   loadSession();
+
+  // garantir que modal de usuários esteja fechado no carregamento
+  if(usersModal) usersModal.classList.add('hidden');
+
   render();
 }
 
@@ -704,14 +708,26 @@ usersBtn.addEventListener('click', () => {
   openUsers();
 });
 function openUsers(){
+  // abre o modal de usuários (somente quando chamado)
+  if(!isAuthenticated() || !isCurrentAdmin()) return alert('Acesso negado');
   usersModal.classList.remove('hidden');
   usersModal.setAttribute('aria-hidden','false');
   renderUsersList();
+  // focar o campo de novo usuário para conveniência
+  setTimeout(() => {
+    if(newUserInput) newUserInput.focus();
+  }, 50);
 }
 function closeUsers(){
   usersModal.classList.add('hidden');
   usersModal.setAttribute('aria-hidden','true');
   createUserForm.reset();
+  // voltar para a view administrativa (se estiver logado)
+  render();
+  // focar no nome do usuário da sessão para feedback
+  setTimeout(() => {
+    try{ if(sessionUserEl) sessionUserEl.focus(); }catch(e){}
+  }, 50);
 }
 closeUsersModal.addEventListener('click', () => closeUsers());
 
@@ -726,6 +742,8 @@ createUserForm.addEventListener('submit', async (e) => {
     alert('Usuário criado');
     createUserForm.reset();
     renderUsersList();
+    // manter o modal aberto para criar mais se necessário
+    setTimeout(() => { if(newUserInput) newUserInput.focus(); }, 50);
   }catch(err){
     alert(err.message || 'Erro ao criar usuário');
   }
