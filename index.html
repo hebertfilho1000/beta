@@ -15,9 +15,15 @@
     <h1>Painel de Atalhos</h1>
 
     <div class="auth-area">
-      <form id="loginForm" class="login-form" autocomplete="off">
-        <input id="loginUser" name="user" placeholder="Usuário" />
-        <input id="loginPass" name="pass" type="password" placeholder="Senha" />
+      <!--
+        Nota de segurança/usabilidade:
+        - inputs começam com readonly para evitar que navegadores preencham automaticamente após voltar.
+        - readonly é removido quando o usuário foca manualmente (veja public.js).
+        - autocomplete="off" e attributes são incluídos como orientação (alguns browsers podem ignorar).
+      -->
+      <form id="loginForm" class="login-form" autocomplete="off" spellcheck="false" autocapitalize="off">
+        <input id="loginUser" name="loginUser" placeholder="Usuário" autocomplete="off" readonly />
+        <input id="loginPass" name="loginPass" type="password" placeholder="Senha" autocomplete="new-password" readonly />
         <button type="submit">Entrar</button>
       </form>
     </div>
