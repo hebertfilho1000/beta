@@ -1,9 +1,14 @@
-// Painel de atalhos com suporte a grupos
+// Painel de atalhos com suporte a grupos + autenticação simples + gerenciamento de usuários
 const STORAGE_KEY = 'shortcuts_v1';
+const USERS_KEY = 'shortcuts_users_v1';
+const SESSION_KEY = 'shortcuts_session_v1';
 
 const grid = document.getElementById('grid');
 const emptyHint = document.getElementById('emptyHint');
+
+const adminControls = document.getElementById('adminControls');
 const addBtn = document.getElementById('addBtn');
+const usersBtn = document.getElementById('usersBtn');
 const exportBtn = document.getElementById('exportBtn');
 const importFile = document.getElementById('importFile');
 const resetBtn = document.getElementById('resetBtn');
@@ -21,14 +26,51 @@ const saveBtn = document.getElementById('saveBtn');
 const cancelBtn = document.getElementById('cancelBtn');
 const deleteBtn = document.getElementById('deleteBtn');
 
+const usersModal = document.getElementById('usersModal');
+const usersList = document.getElementById('usersList');
+const createUserForm = document.getElementById('createUserForm');
+const newUserInput = document.getElementById('newUser');
+const newPassInput = document.getElementById('newPass');
+const newIsAdmin = document.getElementById('newIsAdmin');
+const closeUsersModal = document.getElementById('closeUsersModal');
+
+const loginForm = document.getElementById('loginForm');
+const loginUser = document.getElementById('loginUser');
+const loginPass = document.getElementById('loginPass');
+const authArea = document.getElementById('authArea');
+const sessionPanel = document.getElementById('sessionPanel');
+const sessionUserEl = document.getElementById('sessionUser');
+const logoutBtn = document.getElementById('logoutBtn');
+
 let groups = []; // [{id, name, items: [{name,url}, ...]}]
 let activeGroupId = null;
+
+let users = []; // [{username, passwordHash, salt, isAdmin}]
+let currentSession = null; // {username}
 
 let editingIndex = null;
 let editingGroupId = null;
 let dragFromIndex = null;
 let dragGroupFromIndex = null;
 
+// ----------------- utils (hashing) -----------------
+function randomSalt(len = 12) {
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(b => ('0' + (b % 36).toString(36)).slice(-1)).join('');
+}
+function bufToHex(buffer){
+  return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('');
+}
+async function hashPassword(password, salt) {
+  // simple SHA-256(salt + password) via Web Crypto
+  const enc = new TextEncoder();
+  const data = enc.encode(salt + password);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return bufToHex(hash);
+}
+
+// ----------------- defaults & storage -----------------
 function id() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 }
@@ -40,15 +82,56 @@ function defaultShortcuts(){
     {name:'Gmail', url:'https://mail.google.com'},
     {name:'GitHub', url:'https://github.com'},
     {name:'Stack Overflow', url:'https://stackoverflow.com'},
-    {name:'Twitter', url:'https://twitter.com'},
-    {name:'LinkedIn', url:'https://www.linkedin.com'},
-    {name:'Wikipedia', url:'https://pt.wikipedia.org'},
-    {name:'Notion', url:'https://www.notion.so'}
+    {name:'Wikipedia', url:'https://pt.wikipedia.org'}
   ];
 }
-
 function defaultGroups(){
   return [{id: id(), name: 'Geral', items: defaultShortcuts()}];
+}
+
+// users storage helpers
+function loadUsersFromStorage(){
+  try{
+    const raw = localStorage.getItem(USERS_KEY);
+    if(raw){
+      users = JSON.parse(raw);
+    } else {
+      // create default admin user: admin / admin
+      (async () => {
+        const salt = randomSalt();
+        const hash = await hashPassword('admin', salt);
+        users = [{username:'admin', passwordHash: hash, salt, isAdmin: true}];
+        saveUsersToStorage();
+      })();
+    }
+  }catch(e){
+    console.error('Erro ao carregar usuários', e);
+    users = [];
+  }
+}
+function saveUsersToStorage(){
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+// session helpers
+function loadSession(){
+  try{
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(raw){
+      currentSession = JSON.parse(raw);
+    } else {
+      currentSession = null;
+    }
+  }catch(e){
+    currentSession = null;
+  }
+}
+function saveSession(){
+  if(currentSession){
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentSession));
+  } else {
+    sessionStorage.removeItem(SESSION_KEY);
+  }
 }
 
 function load(){
@@ -56,11 +139,10 @@ function load(){
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw){
       const parsed = JSON.parse(raw);
-      // Migration: if old format (array of shortcuts) -> wrap into single group
       if(Array.isArray(parsed)){
         groups = [{id: id(), name: 'Geral', items: parsed}];
         activeGroupId = groups[0].id;
-        save(); // persist new format
+        save(); // migrate
       } else if(parsed && Array.isArray(parsed.groups)){
         groups = parsed.groups;
         activeGroupId = parsed.activeGroupId || (groups[0] && groups[0].id) || null;
@@ -79,6 +161,8 @@ function load(){
     groups = defaultGroups();
     activeGroupId = groups[0].id;
   }
+  loadUsersFromStorage();
+  loadSession();
   render();
 }
 
@@ -87,6 +171,76 @@ function save(){
   render();
 }
 
+// ----------------- auth & users management -----------------
+function findUser(username){
+  return users.find(u => u.username === username);
+}
+async function createUser(username, password, isAdmin = false){
+  username = username.trim();
+  if(!username || !password) throw new Error('usuário ou senha inválidos');
+  if(findUser(username)) throw new Error('Usuário já existe');
+  const salt = randomSalt();
+  const passwordHash = await hashPassword(password, salt);
+  users.push({username, passwordHash, salt, isAdmin: !!isAdmin});
+  saveUsersToStorage();
+  renderUsersList();
+}
+async function changeUserPassword(username, newPassword){
+  const u = findUser(username);
+  if(!u) throw new Error('Usuário não encontrado');
+  const salt = randomSalt();
+  const hash = await hashPassword(newPassword, salt);
+  u.salt = salt;
+  u.passwordHash = hash;
+  saveUsersToStorage();
+  renderUsersList();
+}
+function deleteUser(username){
+  const idx = users.findIndex(u => u.username === username);
+  if(idx === -1) return;
+  const target = users[idx];
+  // prevent deleting last admin
+  if(target.isAdmin){
+    const admins = users.filter(u => u.isAdmin);
+    if(admins.length <= 1){
+      alert('Não é possível excluir o último administrador.');
+      return false;
+    }
+  }
+  users.splice(idx,1);
+  saveUsersToStorage();
+  renderUsersList();
+  return true;
+}
+async function login(username, password){
+  const u = findUser(username);
+  if(!u) {
+    throw new Error('Usuário/Senha inválidos');
+  }
+  const hash = await hashPassword(password, u.salt);
+  if(hash === u.passwordHash){
+    currentSession = {username: u.username};
+    saveSession();
+    render();
+    return true;
+  } else {
+    throw new Error('Usuário/Senha inválidos');
+  }
+}
+function logout(){
+  currentSession = null;
+  saveSession();
+  render();
+}
+function isAuthenticated(){
+  return currentSession && findUser(currentSession.username);
+}
+function isCurrentAdmin(){
+  const u = isAuthenticated() ? findUser(currentSession.username) : null;
+  return !!(u && u.isAdmin);
+}
+
+// ----------------- rendering -----------------
 function getActiveGroup(){
   return groups.find(g => g.id === activeGroupId) || groups[0];
 }
@@ -103,45 +257,50 @@ function renderGroupsBar(){
     chip.dataset.index = idx;
     chip.dataset.groupId = g.id;
     chip.setAttribute('draggable', 'true');
-    chip.textContent = g.name;
 
-    // actions inside chip (rename/delete)
-    const actions = document.createElement('span');
-    actions.className = 'actions';
-    const editI = document.createElement('span');
-    editI.className = 'icon';
-    editI.title = 'Renomear grupo';
-    editI.textContent = '✏️';
-    editI.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      const newName = prompt('Novo nome para o grupo:', g.name);
-      if(newName && newName.trim()){
-        g.name = newName.trim();
-        save();
-      }
-    });
-    const delI = document.createElement('span');
-    delI.className = 'icon';
-    delI.title = 'Excluir grupo';
-    delI.textContent = '🗑️';
-    delI.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      if(groups.length === 1){
-        alert('Não é possível excluir o último grupo.');
-        return;
-      }
-      if(confirm(`Excluir o grupo "${g.name}" e todos os seus atalhos?`)){
-        groups.splice(idx,1);
-        if(activeGroupId === g.id){
-          activeGroupId = groups[0].id;
+    const titleSpan = document.createElement('span');
+    titleSpan.textContent = g.name;
+    chip.appendChild(titleSpan);
+
+    // actions inside chip (rename/delete) - only admin can see
+    if(isAuthenticated()){
+      const actions = document.createElement('span');
+      actions.className = 'actions';
+      const editI = document.createElement('span');
+      editI.className = 'icon';
+      editI.title = 'Renomear grupo';
+      editI.textContent = '✏️';
+      editI.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const newName = prompt('Novo nome para o grupo:', g.name);
+        if(newName && newName.trim()){
+          g.name = newName.trim();
+          save();
         }
-        save();
-      }
-    });
+      });
+      const delI = document.createElement('span');
+      delI.className = 'icon';
+      delI.title = 'Excluir grupo';
+      delI.textContent = '🗑️';
+      delI.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if(groups.length === 1){
+          alert('Não é possível excluir o último grupo.');
+          return;
+        }
+        if(confirm(`Excluir o grupo "${g.name}" e todos os seus atalhos?`)){
+          groups.splice(idx,1);
+          if(activeGroupId === g.id){
+            activeGroupId = groups[0].id;
+          }
+          save();
+        }
+      });
 
-    actions.appendChild(editI);
-    actions.appendChild(delI);
-    chip.appendChild(actions);
+      actions.appendChild(editI);
+      actions.appendChild(delI);
+      chip.appendChild(actions);
+    }
 
     // clicking selects group
     chip.addEventListener('click', () => {
@@ -149,33 +308,36 @@ function renderGroupsBar(){
       render();
     });
 
-    // drag/drop to reorder groups
-    chip.addEventListener('dragstart', (e) => {
-      dragGroupFromIndex = idx;
-      e.dataTransfer.effectAllowed = 'move';
-      chip.style.opacity = '0.6';
-    });
-    chip.addEventListener('dragend', () => {
-      dragGroupFromIndex = null;
-      chip.style.opacity = '';
-    });
-    chip.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-    });
-    chip.addEventListener('drop', (e) => {
-      e.preventDefault();
-      const toIndex = Number(chip.dataset.index);
-      if(dragGroupFromIndex == null || dragGroupFromIndex === toIndex) return;
-      const item = groups.splice(dragGroupFromIndex,1)[0];
-      groups.splice(toIndex,0,item);
-      save();
-    });
+    // drag/drop to reorder groups (only admin)
+    if(isAuthenticated()){
+      chip.addEventListener('dragstart', (e) => {
+        dragGroupFromIndex = idx;
+        e.dataTransfer.effectAllowed = 'move';
+        chip.style.opacity = '0.6';
+      });
+      chip.addEventListener('dragend', () => {
+        dragGroupFromIndex = null;
+        chip.style.opacity = '';
+      });
+      chip.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+      chip.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const toIndex = Number(chip.dataset.index);
+        if(dragGroupFromIndex == null || dragGroupFromIndex === toIndex) return;
+        const item = groups.splice(dragGroupFromIndex,1)[0];
+        groups.splice(toIndex,0,item);
+        save();
+      });
+    }
 
     groupsBar.insertBefore(chip, addGroupBtn);
   });
 
-  // update addGroup button position/visibility already in DOM
+  // update addGroup button visibility
+  addGroupBtn.style.display = isAuthenticated() ? 'inline-flex' : 'none';
 }
 
 function renderGrid(){
@@ -191,32 +353,37 @@ function renderGrid(){
   active.items.forEach((s, i) => {
     const card = document.createElement('div');
     card.className = 'card';
-    card.setAttribute('draggable', 'true');
-    card.dataset.index = i;
+    // if admin -> draggable for reorder else not draggable
+    if(isAuthenticated()){
+      card.setAttribute('draggable', 'true');
+      card.dataset.index = i;
+    }
 
-    // drag events for moving inside same group
-    card.addEventListener('dragstart', (e) => {
-      dragFromIndex = i;
-      e.dataTransfer.effectAllowed = 'move';
-      card.style.opacity = '0.6';
-    });
-    card.addEventListener('dragend', () => {
-      dragFromIndex = null;
-      card.style.opacity = '';
-    });
-    card.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-    });
-    card.addEventListener('drop', (e) => {
-      e.preventDefault();
-      const toIndex = Number(card.dataset.index);
-      if(dragFromIndex == null || dragFromIndex === toIndex) return;
-      const items = active.items;
-      const item = items.splice(dragFromIndex,1)[0];
-      items.splice(toIndex,0,item);
-      save();
-    });
+    // drag events for moving inside same group (admin only)
+    if(isAuthenticated()){
+      card.addEventListener('dragstart', (e) => {
+        dragFromIndex = i;
+        e.dataTransfer.effectAllowed = 'move';
+        card.style.opacity = '0.6';
+      });
+      card.addEventListener('dragend', () => {
+        dragFromIndex = null;
+        card.style.opacity = '';
+      });
+      card.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+      card.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const toIndex = Number(card.dataset.index);
+        if(dragFromIndex == null || dragFromIndex === toIndex) return;
+        const items = active.items;
+        const item = items.splice(dragFromIndex,1)[0];
+        items.splice(toIndex,0,item);
+        save();
+      });
+    }
 
     const favicon = document.createElement('div');
     favicon.className = 'favicon';
@@ -246,17 +413,19 @@ function renderGrid(){
       window.open(s.url.startsWith('http') ? s.url : 'https://' + s.url, '_blank');
     });
 
-    const editBtn = document.createElement('button');
-    editBtn.className = 'icon-btn';
-    editBtn.title = 'Editar';
-    editBtn.innerHTML = '✏️';
-    editBtn.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      openEditModal(i, active.id);
-    });
-
     actions.appendChild(openBtn);
-    actions.appendChild(editBtn);
+
+    if(isAuthenticated()){
+      const editBtn = document.createElement('button');
+      editBtn.className = 'icon-btn';
+      editBtn.title = 'Editar';
+      editBtn.innerHTML = '✏️';
+      editBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        openEditModal(i, active.id);
+      });
+      actions.appendChild(editBtn);
+    }
 
     card.appendChild(favicon);
     card.appendChild(meta);
@@ -281,13 +450,99 @@ function renderSelectGroup(){
   });
 }
 
+function renderUsersList(){
+  usersList.innerHTML = '';
+  users.forEach(u => {
+    const row = document.createElement('div');
+    row.className = 'user-row';
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    const uname = document.createElement('div');
+    uname.className = 'uname';
+    uname.textContent = u.username;
+    const urole = document.createElement('div');
+    urole.className = 'urole';
+    urole.textContent = u.isAdmin ? 'Administrador' : 'Editor';
+    meta.appendChild(uname);
+    meta.appendChild(urole);
+
+    const actions = document.createElement('div');
+    actions.style.display = 'flex';
+    actions.style.gap = '8px';
+    const changePassBtn = document.createElement('button');
+    changePassBtn.textContent = 'Senha';
+    changePassBtn.addEventListener('click', async () => {
+      const np = prompt(`Nova senha para ${u.username}:`);
+      if(np){
+        await changeUserPassword(u.username, np);
+        alert('Senha alterada');
+      }
+    });
+    const toggleAdminBtn = document.createElement('button');
+    toggleAdminBtn.textContent = u.isAdmin ? 'Remover Admin' : 'Tornar Admin';
+    toggleAdminBtn.addEventListener('click', () => {
+      // prevent removing last admin
+      if(u.isAdmin){
+        const admins = users.filter(x => x.isAdmin);
+        if(admins.length <= 1){
+          alert('Não é possível remover o último administrador.');
+          return;
+        }
+      }
+      u.isAdmin = !u.isAdmin;
+      saveUsersToStorage();
+      renderUsersList();
+    });
+    const delBtn = document.createElement('button');
+    delBtn.textContent = 'Excluir';
+    delBtn.addEventListener('click', () => {
+      if(u.username === currentSession?.username){
+        if(!confirm('Excluir seu próprio usuário? Isso irá fazer logoff. Confirmar?')){
+          return;
+        }
+      } else {
+        if(!confirm(`Excluir usuário ${u.username}?`)) return;
+      }
+      const ok = deleteUser(u.username);
+      if(ok && u.username === currentSession?.username){
+        logout();
+        closeUsers();
+      }
+    });
+
+    actions.appendChild(changePassBtn);
+    actions.appendChild(toggleAdminBtn);
+    actions.appendChild(delBtn);
+
+    row.appendChild(meta);
+    row.appendChild(actions);
+    usersList.appendChild(row);
+  });
+}
+
+function renderAuthArea(){
+  // if authenticated -> show session panel, hide login form and show admin controls
+  if(isAuthenticated()){
+    loginForm.classList.add('hidden');
+    sessionPanel.classList.remove('hidden');
+    sessionUserEl.textContent = currentSession.username;
+    adminControls.classList.remove('hidden');
+  } else {
+    loginForm.classList.remove('hidden');
+    sessionPanel.classList.add('hidden');
+    adminControls.classList.add('hidden');
+  }
+}
+
 function render(){
+  renderAuthArea();
   renderGroupsBar();
   renderSelectGroup();
   renderGrid();
+  renderUsersList();
 }
 
-// Modal controls
+// ----------------- modal controls for shortcuts -----------------
 function openEditModal(index = null, groupId = null){
   editingIndex = index;
   editingGroupId = groupId || activeGroupId;
@@ -310,7 +565,6 @@ function openEditModal(index = null, groupId = null){
   modal.setAttribute('aria-hidden','false');
   inputName.focus();
 }
-
 function closeModal(){
   modal.classList.add('hidden');
   modal.setAttribute('aria-hidden','true');
@@ -343,16 +597,14 @@ form.addEventListener('submit', (e) => {
       fromGroup.items[editingIndex] = record;
     } else {
       // remove from old, add to target
-      const [item] = fromGroup.items.splice(editingIndex, 1);
+      fromGroup.items.splice(editingIndex, 1);
       targetGroup.items.push(record);
     }
   }
   save();
   closeModal();
 });
-
 cancelBtn.addEventListener('click', () => closeModal());
-
 deleteBtn.addEventListener('click', () => {
   if(editingIndex !== null && editingGroupId){
     if(confirm('Excluir este atalho?')) {
@@ -367,10 +619,14 @@ deleteBtn.addEventListener('click', () => {
 });
 
 // add shortcut button opens modal with active group selected
-addBtn.addEventListener('click', () => openEditModal(null, activeGroupId));
+addBtn.addEventListener('click', () => {
+  if(!isAuthenticated()) return alert('Acesso negado');
+  openEditModal(null, activeGroupId);
+});
 
 // export / import
 exportBtn.addEventListener('click', () => {
+  if(!isAuthenticated()) return alert('Acesso negado');
   const blob = new Blob([JSON.stringify({groups, activeGroupId}, null, 2)], {type: 'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -382,6 +638,7 @@ exportBtn.addEventListener('click', () => {
   URL.revokeObjectURL(url);
 });
 importFile.addEventListener('change', (e) => {
+  if(!isAuthenticated()) return alert('Acesso negado');
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
@@ -389,7 +646,6 @@ importFile.addEventListener('change', (e) => {
     try{
       const data = JSON.parse(reader.result);
       if(Array.isArray(data)){
-        // old plain array -> ask to replace into a single group
         if(confirm('Arquivo JSON é um array antigo. Substituir atalhos atuais por este array (será colocado em um único grupo "Geral")?')) {
           groups = [{id: id(), name:'Geral', items: data.map(it => ({name:it.name||'', url:it.url||''}))}];
           activeGroupId = groups[0].id;
@@ -414,6 +670,7 @@ importFile.addEventListener('change', (e) => {
 
 // groups management
 addGroupBtn.addEventListener('click', () => {
+  if(!isAuthenticated()) return alert('Acesso negado');
   const name = prompt('Nome do novo grupo:', 'Novo Grupo');
   if(name && name.trim()){
     const g = {id: id(), name: name.trim(), items: []};
@@ -425,6 +682,7 @@ addGroupBtn.addEventListener('click', () => {
 
 // reset to defaults (groups + items)
 resetBtn.addEventListener('click', () => {
+  if(!isAuthenticated()) return alert('Acesso negado');
   if(confirm('Restaurar exemplos e apagar seus atalhos salvos?')) {
     groups = defaultGroups();
     activeGroupId = groups[0].id;
@@ -436,6 +694,60 @@ resetBtn.addEventListener('click', () => {
 modal.addEventListener('click', (e) => {
   if(e.target === modal) closeModal();
 });
+usersModal.addEventListener('click', (e) => {
+  if(e.target === usersModal) closeUsers();
+});
 
-// initial load
+// ----------------- users modal controls -----------------
+usersBtn.addEventListener('click', () => {
+  if(!isAuthenticated() || !isCurrentAdmin()) return alert('Acesso negado: apenas administradores');
+  openUsers();
+});
+function openUsers(){
+  usersModal.classList.remove('hidden');
+  usersModal.setAttribute('aria-hidden','false');
+  renderUsersList();
+}
+function closeUsers(){
+  usersModal.classList.add('hidden');
+  usersModal.setAttribute('aria-hidden','true');
+  createUserForm.reset();
+}
+closeUsersModal.addEventListener('click', () => closeUsers());
+
+createUserForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if(!isAuthenticated() || !isCurrentAdmin()) return alert('Acesso negado');
+  const uname = newUserInput.value.trim();
+  const pass = newPassInput.value;
+  const adminFlag = !!newIsAdmin.checked;
+  try{
+    await createUser(uname, pass, adminFlag);
+    alert('Usuário criado');
+    createUserForm.reset();
+    renderUsersList();
+  }catch(err){
+    alert(err.message || 'Erro ao criar usuário');
+  }
+});
+
+// ----------------- login form -----------------
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const u = loginUser.value.trim();
+  const p = loginPass.value;
+  try{
+    await login(u, p);
+    loginForm.reset();
+    render();
+  }catch(err){
+    alert(err.message || 'Erro no login');
+  }
+});
+
+logoutBtn.addEventListener('click', () => {
+  logout();
+});
+
+// ----------------- initial -----------------
 load();

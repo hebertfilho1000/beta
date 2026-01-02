@@ -9,14 +9,33 @@
 <body>
   <header>
     <h1>Painel de Atalhos</h1>
-    <div class="header-controls">
+
+    <!-- Controles da view administrativa (aparecem só quando autenticado) -->
+    <div id="adminControls" class="header-controls hidden">
       <button id="addBtn">Adicionar atalho</button>
+      <button id="usersBtn">Usuários</button>
       <button id="exportBtn">Exportar JSON</button>
       <label class="import-label">
         Importar JSON
         <input type="file" id="importFile" accept=".json" />
       </label>
       <button id="resetBtn" title="Reiniciar para exemplos">Reset</button>
+    </div>
+
+    <!-- Área de autenticação / sessão (sempre visível; JS controla o que mostrar) -->
+    <div id="authArea" class="auth-area">
+      <!-- Login (public view) -->
+      <form id="loginForm" class="login-form" autocomplete="off">
+        <input id="loginUser" name="user" placeholder="Usuário" />
+        <input id="loginPass" name="pass" type="password" placeholder="Senha" />
+        <button type="submit">Entrar</button>
+      </form>
+
+      <!-- Sessão (aparece quando autenticado) -->
+      <div id="sessionPanel" class="session-panel hidden">
+        <span id="sessionUser" class="session-user"></span>
+        <button id="logoutBtn" class="logout-btn">Logoff</button>
+      </div>
     </div>
   </header>
 
@@ -54,6 +73,37 @@
           <button type="button" id="deleteBtn" class="danger">Excluir</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal de gerenciamento de usuários (admin) -->
+  <div id="usersModal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-content">
+      <h2>Gerenciar Usuários</h2>
+
+      <div id="usersList" class="users-list"></div>
+
+      <hr />
+
+      <form id="createUserForm">
+        <label>
+          Novo usuário
+          <input id="newUser" placeholder="usuário" required />
+        </label>
+        <label>
+          Senha
+          <input id="newPass" type="password" placeholder="senha" required />
+        </label>
+        <label style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="newIsAdmin" />
+          <span>Administrador</span>
+        </label>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+          <button type="submit">Criar</button>
+          <button type="button" id="closeUsersModal">Fechar</button>
+        </div>
+      </form>
+
     </div>
   </div>
 
